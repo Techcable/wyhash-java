@@ -7,13 +7,18 @@ import java.util.Objects;
 public final class BufferMemorySection extends MemorySection {
     private final ByteBuffer buffer;
     /* package */ BufferMemorySection(ByteBuffer buffer) {
+        super(buffer.order());
         this.buffer = Objects.requireNonNull(buffer, "Null buffer");
         if (buffer.hasArray()) throw new IllegalArgumentException("Should prefer HeapMemorySection");
     }
-
     @Override
     public long length() {
         return this.buffer.limit();
+    }
+
+    @Override
+    protected MemorySection reversedOrderSection() {
+        return new BufferMemorySection(this.buffer.duplicate().order(reverseOrder(this.order())));
     }
 
     @Override
@@ -23,11 +28,6 @@ public final class BufferMemorySection extends MemorySection {
                 (int) startIndex,
                 (int) newSize
         ));
-    }
-
-    @Override
-    public ByteOrder order() {
-        return buffer.order();
     }
 
     @Override

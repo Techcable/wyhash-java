@@ -9,12 +9,8 @@ public final class HeapMemorySection extends MemorySection {
     private final byte[] bytes;
     private final int startOffset, length;
 
-    @Override
-    public ByteOrder order() {
-        return BYTE_ORDER;
-    }
-
     /* package */ HeapMemorySection(byte[] bytes, int startOffset, int length) {
+        super(ByteOrder.nativeOrder());
         Objects.checkFromIndexSize(startOffset, length, bytes.length);
         this.bytes = bytes;
         this.startOffset = startOffset;
@@ -25,6 +21,17 @@ public final class HeapMemorySection extends MemorySection {
     @Override
     public long length() {
         return this.length;
+    }
+
+    @Override
+    public MemorySection withOrder(ByteOrder order) {
+        /* NOTE: Overridden to try and aid constant folding */
+        return order == ByteOrder.nativeOrder() ? this : this.reversedOrderSection();
+    }
+
+    @Override
+    protected MemorySection reversedOrderSection() {
+        return new ReverseMemorySection(this);
     }
 
     @Override
@@ -74,18 +81,16 @@ public final class HeapMemorySection extends MemorySection {
         return (long) LOAD_LONG.get(this.bytes, (int) offset + this.startOffset);
     }
 
-    private static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
-
     private static final VarHandle LOAD_SHORT = MethodHandles.byteArrayViewVarHandle(
-            int.class,
-            BYTE_ORDER
+            short[].class,
+            ByteOrder.nativeOrder()
     );
     private static final VarHandle LOAD_INT = MethodHandles.byteArrayViewVarHandle(
-            int.class,
-            BYTE_ORDER
+            int[].class,
+            ByteOrder.nativeOrder()
     );
     private static final VarHandle LOAD_LONG = MethodHandles.byteArrayViewVarHandle(
-            int.class,
-            BYTE_ORDER
+            long[].class,
+            ByteOrder.nativeOrder()
     );
 }
