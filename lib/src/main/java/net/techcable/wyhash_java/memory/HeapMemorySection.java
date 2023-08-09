@@ -5,7 +5,7 @@ import java.lang.invoke.VarHandle;
 import java.nio.ByteOrder;
 import java.util.Objects;
 
-public final class HeapMemorySection extends MemorySection {
+/* package */ final class HeapMemorySection extends MemorySection {
     private final byte[] bytes;
     private final int startOffset, length;
 
@@ -47,10 +47,10 @@ public final class HeapMemorySection extends MemorySection {
     }
 
     @Override
-    public void getBytes(long offset, byte[] dest, int destOffset, int destLength) {
-        Objects.checkFromIndexSize(offset, destLength, this.length);
-        Objects.checkFromIndexSize(destOffset, destLength, dest.length);
-        System.arraycopy(this.bytes, this.startOffset + (int) offset, dest, destOffset, destLength);
+    public void getBytes(long offset, byte[] dest, int destOffset, int length) {
+        Objects.checkFromIndexSize(offset, length, this.length);
+        Objects.checkFromIndexSize(destOffset, length, dest.length);
+        System.arraycopy(this.bytes, this.startOffset + (int) offset, dest, destOffset, length);
     }
 
     @Override

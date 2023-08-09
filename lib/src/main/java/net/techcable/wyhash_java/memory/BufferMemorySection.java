@@ -1,9 +1,10 @@
 package net.techcable.wyhash_java.memory;
 
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Objects;
 
-public final class BufferMemorySection extends MemorySection {
+/* package */ final class BufferMemorySection extends MemorySection {
     private final ByteBuffer buffer;
     /* package */ BufferMemorySection(ByteBuffer buffer) {
         super(buffer.order());
@@ -18,7 +19,7 @@ public final class BufferMemorySection extends MemorySection {
 
     @Override
     protected MemorySection reversedOrderSection() {
-        return new BufferMemorySection(this.buffer.duplicate().order(reverseOrder(this.order())));
+        return new BufferMemorySection(this.buffer.duplicate().order(reverseByteOrder(this.order())));
     }
 
     @Override
@@ -34,9 +35,9 @@ public final class BufferMemorySection extends MemorySection {
     }
 
     @Override
-    public void getBytes(long offset, byte[] dest, int destOffset, int destLength) {
-        Objects.checkFromToIndex(offset, destLength, this.length());
-        this.buffer.get((int) offset, dest, destOffset, destLength);
+    public void getBytes(long offset, byte[] dest, int destOffset, int length) {
+        Objects.checkFromToIndex(offset, length, this.length());
+        this.buffer.get((int) offset, dest, destOffset, length);
     }
 
     @Override
@@ -55,5 +56,10 @@ public final class BufferMemorySection extends MemorySection {
     public long getLong(long offset) {
         Objects.checkIndex(offset, length());
         return buffer.getLong((int) offset);
+    }
+
+    @Override
+    public MemorySection withOrder(ByteOrder order) {
+        return null;
     }
 }

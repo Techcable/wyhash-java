@@ -4,9 +4,25 @@ import java.nio.ByteOrder;
 import java.util.HexFormat;
 import java.util.Objects;
 
+/**
+ * A 128-bit integer value.
+ *
+ * @param lowBits the least-significant 64 bits
+ * @param highBits the most-significant 64 bits
+ */
 public record Int128(long lowBits, long highBits) {
     private static final HexFormat HEX_FORMAT = HexFormat.of().withUpperCase();
 
+    /**
+     * Convert this integer to a hexidecimal string.
+     * <p>
+     *     Unlike {@link Long#toHexString(long)},
+     *     leading zeroes are <em>not</em> stripped.
+     *     However, {@code _} separators are included every four digits (two bytes).
+     * </p>
+     *
+     * @return a hex representation
+     */
     public String toHexString() {
         final int expectedCapacity = (BYTES * 2) + (BYTES / 4) + 2;
         var res = new StringBuilder(expectedCapacity);
@@ -24,8 +40,19 @@ public record Int128(long lowBits, long highBits) {
         return toHexString() + "U128";
     }
 
-    public static final int BYTES = Long.BYTES * 2;
+    /**
+     * The number of bytes in an 128-bit integer ({@code 16}).
+     */
+    public static final int BYTES = 16;
 
+    /**
+     * Get the byte at the specified index, using a specific byte order.
+     *
+     * @param index the index of the byte within this value
+     * @param order the byte ordering to interpret this as
+     * @throws IndexOutOfBoundsException if the byte index is invalid
+     * @return the byte value
+     */
     public byte getByteAt(int index, ByteOrder order) {
         Objects.checkIndex(index, BYTES);
         Objects.requireNonNull(order, "Null ByteOrder");

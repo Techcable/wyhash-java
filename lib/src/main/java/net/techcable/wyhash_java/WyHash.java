@@ -12,6 +12,15 @@ import net.techcable.wyhash_java.memory.MemorySection;
 import net.techcable.wyhash_java.utils.Int128;
 import net.techcable.wyhash_java.utils.MathUtils;
 
+/**
+ * Represents the configuration options for the
+ * <a href="https://github.com/wangyi-fudan/wyhash">wyhash</a> algorithm.
+ * <p>
+ *     The default configuration can be obtained via {@link WyHash#of()}.
+ *     The two parameter options are a {@link WyHash.Secret} and a "seed",
+ *     set via {@link #withSecret(Secret)} and {@link #withSeed(long)} respectively.
+ * </p>
+ */
 public final class WyHash {
     private final long secret0, secret1, secret2, secret3;
     private final long initialSeed;
@@ -27,27 +36,55 @@ public final class WyHash {
 
     private static final WyHash DEFAULT = new WyHash(0, Secret.DEFAULT);
 
+    /**
+     * Get a {@link WyHash} instance with the default configuration.
+     *
+     * @return the instance with the configuration
+     */
     public static WyHash of() {
         return DEFAULT;
     }
 
-    public static WyHash ofSeed(long seed) {
-        return seed == 0 ? DEFAULT : new WyHash(seed, Secret.DEFAULT);
-    }
-
+    /**
+     * Return a new instance with the specified seed.
+     *
+     * @param seed the seed for the new instance
+     * @return a new hash config with the specified seed
+     */
     public WyHash withSeed(long seed) {
         return seed == this.initialSeed ? this : new WyHash(seed, this.getSecret());
     }
 
+    /**
+     * Return a new instance using the specified secret.
+     *
+     * @param secret the secret for the new instance
+     * @return a new hash config with the specified secret
+     */
     public WyHash withSecret(@NotNull Secret secret) {
         return new WyHash(this.initialSeed, secret);
     }
 
+    /**
+     * Get the secret used for hashing.
+     * <p>
+     * This should be hidden from the user, to help resist hash-DOS attacks.
+     * </p>
+     *
+     * @return the secret
+     * @see #withSeed(long)
+     */
     @NotNull
     public Secret getSecret() {
         return new Secret(secret0, secret1, secret2, secret3);
     }
 
+    /**
+     * Get the seed used for hashing.
+     *
+     * @return the seed
+     * @see #withSeed(long) to create a new instance with a different seed
+     */
     public long getSeed() {
         return this.initialSeed;
     }
@@ -62,6 +99,9 @@ public final class WyHash {
         return low ^ high;
     }
 
+    /**
+     * The {@link ByteOrder} that is required for the wyhash algorithm.
+     */
     public static final ByteOrder REQUIRED_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
 
     // _wyr3
@@ -71,17 +111,38 @@ public final class WyHash {
         return (long) section.getByte(0) << 16 | (long) section.getByte(size >> 1) << 8 | section.getByte(size - 1);
     }
 
+    /**
+     * Hash the specified byte array.
+     *
+     * @param bytes the byte array to hash.
+     * @return the computed hash code
+     */
     public long wyHash(byte[] bytes) {
         return wyHash(bytes, 0, bytes.length);
     }
 
+    /**
+     * Hash a sub-region of the specified byte array,.
+     *
+     * @param bytes the array to hash
+     * @param startOffset the start index of where to begin hashing
+     * @param length the number of bytes to hash
+     * @throws IndexOutOfBoundsException if the specified offset &amp; length are out of bounds
+     * @return the computed hash code
+     */
     public long wyHash(byte[] bytes, int startOffset, int length) {
         Objects.checkFromIndexSize(startOffset, length, bytes.length);
         return wyHash(MemorySection.ofArray(bytes, startOffset, length));
     }
 
-    public long wyHash(MemorySection originalSection) {
-        return this.wyHash(new State(this), originalSection.withOrder(REQUIRED_BYTE_ORDER));
+    /**
+     * Hash the specified {@link MemorySection}.
+     *
+     * @param section the section to hash
+     * @return the computed hash code
+     */
+    public long wyHash(MemorySection section) {
+        return this.wyHash(new State(this), section.withOrder(REQUIRED_BYTE_ORDER));
     }
 
     /**
@@ -217,11 +278,39 @@ public final class WyHash {
         public static final Secret DEFAULT =
                 new Secret(0xa0761d6478bd642fL, 0xe7037ed1a0b428dbL, 0x8ebc6af09c88c6e3L, 0x589965cc75374cc3L);
 
-        @Override
-        public String toString() {
+        private String joinToString(String prefix, String suffix) {
             return Arrays.stream(this.toArray())
                     .mapToObj(HexFormat.of().withPrefix("0x")::toHexDigits)
-                    .collect(Collectors.joining(", ", "Secret(", ")"));
+                    .collect(Collectors.joining(", ", prefix, suffix));
         }
+
+        @Override
+        public String toString() {
+            return this.joinToString("Secret(", ")");
+        }
+    }
+
+    @Override
+    public String toString() {
+        if (this.equals(DEFAULT)) {
+            return "WyHash.DEFAULT";
+        } else {
+            var secret = this.getSecret();
+            String secretRepr = secret.equals(Secret.DEFAULT) ? "Secret.DEFAULT" : secret.joinToString("[", "]");
+            return "WyHash[seed=0x" + Long.toHexString(this.getSeed()) + ", secret=" + secretRepr + "]";
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.getSeed(), this.getSecret());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj == this
+                || obj instanceof WyHash hashConfig
+                        && this.getSeed() == hashConfig.getSeed()
+                        && this.getSecret().equals(hashConfig.getSecret());
     }
 }

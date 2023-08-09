@@ -1,10 +1,10 @@
 package net.techcable.wyhash_java.memory;
 
-public final class ReverseMemorySection extends MemorySection {
+/* package */ final class ReverseMemorySection extends MemorySection {
     private final MemorySection src;
 
     public ReverseMemorySection(MemorySection src) {
-        super(reverseOrder(src.order()));
+        super(reverseByteOrder(src.order()));
         this.src = src;
     }
 
@@ -29,8 +29,8 @@ public final class ReverseMemorySection extends MemorySection {
     }
 
     @Override
-    public void getBytes(long offset, byte[] dest, int destOffset, int destLength) {
-        src.getBytes(offset, dest, destOffset, destLength);
+    public void getBytes(long offset, byte[] dest, int destOffset, int length) {
+        src.getBytes(offset, dest, destOffset, length);
     }
 
     @Override

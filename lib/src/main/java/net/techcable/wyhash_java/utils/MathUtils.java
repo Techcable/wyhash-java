@@ -6,6 +6,9 @@ import java.lang.invoke.MethodType;
 
 import org.jetbrains.annotations.VisibleForTesting;
 
+/**
+ * Miscellaneous math utilities needed for {@link net.techcable.wyhash_java.WyHash}.
+ */
 public final class MathUtils {
     private static final MethodHandle UNSIGNED_MULTIPLY_HIGH_METHOD;
 
@@ -40,10 +43,11 @@ public final class MathUtils {
 
     /**
      * Perform an unsigned 128-bit multiplication and return the most-significant 64 bits.
-     * <p/>
+     * <p>
      * As of Java 18, this is included in the JDK as
      * <a href="https://docs.oracle.com/en/java/javase/18/docs/api/java.base/java/lang/Math.html#unsignedMultiplyHigh(long,long)">
      * Math.unsignedMultiplyHigh</a>
+     * </p>
      *
      * @param x the first value to multiply
      * @param y the second value to multiply
@@ -62,6 +66,7 @@ public final class MathUtils {
      * Perform a "full" multiplication of the two specified {@code long} values.
      * <p>
      * Returns a {@link Int128 128-bit integer object} containing both parts of the results.
+     * </p>
      *
      * @param x the first value to multiply
      * @param y the second value to multiply
