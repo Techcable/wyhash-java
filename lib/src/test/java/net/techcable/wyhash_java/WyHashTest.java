@@ -7,8 +7,6 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import net.techcable.wyhash_java.memory.MemorySection;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class WyHashTest {
@@ -16,11 +14,11 @@ public class WyHashTest {
     @MethodSource("testData")
     public void wyHashTest(TestData data) {
         var ascii = data.msg.getBytes(StandardCharsets.US_ASCII);
-        long actual = WyHash.wyHash(MemorySection.ofArray(ascii, 0, ascii.length), data.seed, WyHash.Secret.DEFAULT);
+        long actual = WyHash.create().withSeed(data.seed).wyHash(ascii);
         assertEquals(data.expectedHash, actual);
     }
 
-    record TestData(String msg, long seed, long expectedHash) {}
+    public record TestData(String msg, long seed, long expectedHash) {}
 
     private static final List<String> TEST_MSGS = List.of(
             "",

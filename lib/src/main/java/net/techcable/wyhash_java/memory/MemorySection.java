@@ -57,6 +57,10 @@ public abstract sealed class MemorySection permits HeapMemorySection, BufferMemo
 
     protected abstract MemorySection reversedOrderSection();
 
+    public static MemorySection ofArray(byte[] bytes) {
+        return ofArray(bytes, 0, bytes.length);
+    }
+
     public static MemorySection ofArray(byte[] bytes, int startOffset, int length) {
         Objects.checkFromIndexSize(startOffset, length, bytes.length);
         return new HeapMemorySection(bytes, startOffset, length);
