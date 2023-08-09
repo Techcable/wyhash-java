@@ -31,14 +31,22 @@ public class WyHashTest {
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
             "1234567890123456789012345678901234567890123456789012345678901234567890" + "1234567890");
     private static final List<Long> TEST_HASHES = List.of(
-            0x42bc986dc5eec4d3L,
-            0x84508dc903c31551L,
-            0x0bc54887cfc9ecb1L,
-            0x6e2ff3298208a67cL,
-            0x9a64e42e897195b9L,
-            0x9199383239c32554L,
-            0x7c1ccf6bba30f5a5L);
+            0x0409638ee2bde459L,
+            0xa8412d091b5fe0a9L,
+            0x32dd92e4b2915153L,
+            0x8619124089a3a16bL,
+            0x7a43afb61d7f5f40L,
+            0xff42329b90e50d58L,
+            0xc39cab13b115aad3L);
 
+    /*
+     * The expected data, based on the output of `test_vector` in the original repo:
+     * https://github.com/wangyi-fudan/wyhash/blob/77e50f267fbc7b8e2/test_vector.cppw
+     *
+     * WARNING: the `vector<uint64_t>` is NOT the expected hashes.
+     * I'm not sure what it is.
+     * To get the expected hashes, you have to actually run the program.
+     */
     static List<TestData> testData() {
         if (TEST_HASHES.size() != TEST_MSGS.size()) throw new AssertionError();
         return IntStream.range(0, TEST_MSGS.size())
