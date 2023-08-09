@@ -2,11 +2,49 @@ package net.techcable.wyhash_java;
 
 import net.techcable.wyhash_java.memory.MemorySection;
 
+import java.lang.invoke.*;
 import java.nio.ByteOrder;
 import java.util.Objects;
 
 public final class WyHash {
+    private static final MethodHandle unsignedMultiplyHighImpl;
+    static {
+        final MethodType mtype = MethodType.methodType(long.class, long.class, long.class);
+        MethodHandle unsignedMultiplyHigh;
+        try {
+            try {
+                // Prefer JDK impl (hopefully can use intrinsic)
+                unsignedMultiplyHigh = MethodHandles.publicLookup()
+                    .findStatic(Math.class, "unsignedMultiplyHigh", mtype);
+            } catch (NoSuchMethodException ignored) {
+                try {
+                    unsignedMultiplyHigh = MethodHandles.lookup()
+                        .findStatic(WyHash.class, "unsignedMultiplyHighFallback", mtype);
+                } catch (NoSuchMethodException e) {
+                    throw new AssertionError(e);
+                }
+            }
+        } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
+        }
+        unsignedMultiplyHighImpl = unsignedMultiplyHigh;
+    }
 
+    private static long unsignedMultiplyHigh(long x, long y) {
+        try {
+            return (long) unsignedMultiplyHighImpl.invokeExact(x, y);
+        } catch (Throwable t) {
+            throw new RuntimeException(t);
+        }
+    }
+
+    private static long unsignedMultiplyHighFallback(long x, long y) {
+        // Taken from JDK: https://github.com/openjdk/jdk/blob/593ba2fe47ce/src/java.base/share/classes/java/lang/Math.java#L1428-L1432
+        long result = Math.multiplyHigh(x, y);
+        result += (y & (x >> 63));
+        result += (x & (y >> 63));
+        return result;
+    }
 
     //
     // Implementation: Ported from C
@@ -17,7 +55,7 @@ public final class WyHash {
         public Int128 wyMum() {
             return new Int128(
                     low * high,
-                    Math.multiplyHigh(low, high)
+                    unsignedMultiplyHigh(low, high)
             );
         }
 
