@@ -1,25 +1,26 @@
 package net.techcable.wyhash_java;
 
-import net.techcable.wyhash_java.memory.MemorySection;
-
 import java.lang.invoke.*;
 import java.nio.ByteOrder;
 import java.util.Objects;
 
+import net.techcable.wyhash_java.memory.MemorySection;
+
 public final class WyHash {
     private static final MethodHandle unsignedMultiplyHighImpl;
+
     static {
         final MethodType mtype = MethodType.methodType(long.class, long.class, long.class);
         MethodHandle unsignedMultiplyHigh;
         try {
             try {
                 // Prefer JDK impl (hopefully can use intrinsic)
-                unsignedMultiplyHigh = MethodHandles.publicLookup()
-                    .findStatic(Math.class, "unsignedMultiplyHigh", mtype);
+                unsignedMultiplyHigh =
+                        MethodHandles.publicLookup().findStatic(Math.class, "unsignedMultiplyHigh", mtype);
             } catch (NoSuchMethodException ignored) {
                 try {
-                    unsignedMultiplyHigh = MethodHandles.lookup()
-                        .findStatic(WyHash.class, "unsignedMultiplyHighFallback", mtype);
+                    unsignedMultiplyHigh =
+                            MethodHandles.lookup().findStatic(WyHash.class, "unsignedMultiplyHighFallback", mtype);
                 } catch (NoSuchMethodException e) {
                     throw new AssertionError(e);
                 }
@@ -39,7 +40,8 @@ public final class WyHash {
     }
 
     private static long unsignedMultiplyHighFallback(long x, long y) {
-        // Taken from JDK: https://github.com/openjdk/jdk/blob/593ba2fe47ce/src/java.base/share/classes/java/lang/Math.java#L1428-L1432
+        // Taken from JDK:
+        // https://github.com/openjdk/jdk/blob/593ba2fe47ce/src/java.base/share/classes/java/lang/Math.java#L1428-L1432
         long result = Math.multiplyHigh(x, y);
         result += (y & (x >> 63));
         result += (x & (y >> 63));
@@ -53,10 +55,7 @@ public final class WyHash {
     private record Int128(long low, long high) {
         // _wymum
         public Int128 wyMum() {
-            return new Int128(
-                    low * high,
-                    unsignedMultiplyHigh(low, high)
-            );
+            return new Int128(low * high, unsignedMultiplyHigh(low, high));
         }
 
         // _wymix
@@ -72,9 +71,7 @@ public final class WyHash {
     private static long readThreeOrFewerBytes(MemorySection section, long size) {
         assert size > 0 && size <= 3;
         /* return (((uint64_t)p[0])<<16)|(((uint64_t)p[k>>1])<<8)|p[k-1]; */
-        return (long) section.getByte(0) << 16
-                | (long) section.getByte(size >> 1) << 8
-                | section.getByte(size - 1);
+        return (long) section.getByte(0) << 16 | (long) section.getByte(size >> 1) << 8 | section.getByte(size - 1);
     }
 
     public static long wyHash(byte[] bytes) {
@@ -84,11 +81,7 @@ public final class WyHash {
     public static long wyHash(byte[] bytes, int startOffset, int length) {
         Objects.checkFromIndexSize(startOffset, length, bytes.length);
         // TODO: Allow customizing secret & seed
-        return wyHash(MemorySection.ofArray(
-                bytes,
-                startOffset,
-                length
-        ), 0, Secret.DEFAULT);
+        return wyHash(MemorySection.ofArray(bytes, startOffset, length), 0, Secret.DEFAULT);
     }
 
     public static long wyHash(MemorySection originalSection, long seed, Secret secret) {
@@ -100,8 +93,7 @@ public final class WyHash {
         if (length <= 16) {
             if (length >= 4) {
                 /* a=(_wyr4(p)<<32)|_wyr4(p+((len>>3)<<2)) */
-                a = ((long) originalSection.getInt(0) << 32)
-                        | ((long) originalSection.getInt((length >> 3) << 2));
+                a = ((long) originalSection.getInt(0) << 32) | ((long) originalSection.getInt((length >> 3) << 2));
                 /*  b=(_wyr4(p+len-4)<<32)|_wyr4(p+len-4-((len>>3)<<2)) */
                 b = (long) originalSection.getInt(length - 4) << 32
                         | (long) originalSection.getInt(length - 4 - ((length >> 3) << 2));
@@ -131,50 +123,26 @@ public final class WyHash {
         if (i > 48) {
             long see1 = seed, see2 = see1;
             do {
-                seed = new Int128(
-                        section.getLong(offset) ^ secret.b,
-                        section.getLong(offset + 8) ^ seed
-                ).wyMix();
-                see1 = new Int128(
-                        section.getLong(offset + 16) ^ secret.c,
-                        section.getLong(offset + 24) ^ see1
-                ).wyMix();
-                see2 = new Int128(
-                        section.getLong(offset + 32) ^ secret.d,
-                        section.getLong(offset + 40) ^ see2
-                ).wyMix();
+                seed = new Int128(section.getLong(offset) ^ secret.b, section.getLong(offset + 8) ^ seed).wyMix();
+                see1 = new Int128(section.getLong(offset + 16) ^ secret.c, section.getLong(offset + 24) ^ see1).wyMix();
+                see2 = new Int128(section.getLong(offset + 32) ^ secret.d, section.getLong(offset + 40) ^ see2).wyMix();
                 offset += 48;
                 i -= 48;
             } while (i > 48);
             seed ^= see1 ^ see2;
         }
         while (i > 16) {
-            seed = new Int128(
-                    section.getLong(offset) ^ secret.b,
-                    section.getLong(offset + 8) ^ seed
-            ).wyMix();
+            seed = new Int128(section.getLong(offset) ^ secret.b, section.getLong(offset + 8) ^ seed).wyMix();
             i -= 16;
             offset += 16;
         }
-        return new LargeHashResult(
-                section.getLong(offset + i - 16),
-                section.getLong(offset + i - 8),
-                seed
-        );
+        return new LargeHashResult(section.getLong(offset + i - 16), section.getLong(offset + i - 8), seed);
     }
+
     private record LargeHashResult(long a, long b, long seed) {}
 
-    public record Secret(
-            long a,
-            long b,
-            long c,
-            long d
-    ) {
-        public static final Secret DEFAULT = new Secret(
-                0xa0761d6478bd642fL,
-                0xe7037ed1a0b428dbL,
-                0x8ebc6af09c88c6e3L,
-                0x589965cc75374cc3L
-        );
+    public record Secret(long a, long b, long c, long d) {
+        public static final Secret DEFAULT =
+                new Secret(0xa0761d6478bd642fL, 0xe7037ed1a0b428dbL, 0x8ebc6af09c88c6e3L, 0x589965cc75374cc3L);
     }
 }

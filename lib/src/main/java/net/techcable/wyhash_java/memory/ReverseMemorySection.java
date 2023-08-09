@@ -1,7 +1,5 @@
 package net.techcable.wyhash_java.memory;
 
-import java.nio.ByteOrder;
-
 public final class ReverseMemorySection extends MemorySection {
     private final MemorySection src;
 

@@ -37,11 +37,7 @@ public final class HeapMemorySection extends MemorySection {
     @Override
     public MemorySection slice(long startIndex, long newSize) {
         Objects.checkFromIndexSize(startIndex, newSize, this.length);
-        return new HeapMemorySection(
-                this.bytes,
-                this.startOffset + (int) startIndex,
-                (int) newSize
-        );
+        return new HeapMemorySection(this.bytes, this.startOffset + (int) startIndex, (int) newSize);
     }
 
     @Override
@@ -54,13 +50,7 @@ public final class HeapMemorySection extends MemorySection {
     public void getBytes(long offset, byte[] dest, int destOffset, int destLength) {
         Objects.checkFromIndexSize(offset, destLength, this.length);
         Objects.checkFromIndexSize(destOffset, destLength, dest.length);
-        System.arraycopy(
-                this.bytes,
-                this.startOffset + (int) offset,
-                dest,
-                destOffset,
-                destLength
-        );
+        System.arraycopy(this.bytes, this.startOffset + (int) offset, dest, destOffset, destLength);
     }
 
     @Override
@@ -81,16 +71,10 @@ public final class HeapMemorySection extends MemorySection {
         return (long) LOAD_LONG.get(this.bytes, (int) offset + this.startOffset);
     }
 
-    private static final VarHandle LOAD_SHORT = MethodHandles.byteArrayViewVarHandle(
-            short[].class,
-            ByteOrder.nativeOrder()
-    );
-    private static final VarHandle LOAD_INT = MethodHandles.byteArrayViewVarHandle(
-            int[].class,
-            ByteOrder.nativeOrder()
-    );
-    private static final VarHandle LOAD_LONG = MethodHandles.byteArrayViewVarHandle(
-            long[].class,
-            ByteOrder.nativeOrder()
-    );
+    private static final VarHandle LOAD_SHORT =
+            MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.nativeOrder());
+    private static final VarHandle LOAD_INT =
+            MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.nativeOrder());
+    private static final VarHandle LOAD_LONG =
+            MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.nativeOrder());
 }

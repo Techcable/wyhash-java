@@ -1,7 +1,6 @@
 package net.techcable.wyhash_java.memory;
 
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Objects;
 
 public final class BufferMemorySection extends MemorySection {
@@ -11,6 +10,7 @@ public final class BufferMemorySection extends MemorySection {
         this.buffer = Objects.requireNonNull(buffer, "Null buffer");
         if (buffer.hasArray()) throw new IllegalArgumentException("Should prefer HeapMemorySection");
     }
+
     @Override
     public long length() {
         return this.buffer.limit();
@@ -24,10 +24,7 @@ public final class BufferMemorySection extends MemorySection {
     @Override
     public MemorySection slice(long startIndex, long newSize) {
         Objects.checkFromIndexSize(startIndex, newSize, this.length());
-        return new BufferMemorySection(this.buffer.slice(
-                (int) startIndex,
-                (int) newSize
-        ));
+        return new BufferMemorySection(this.buffer.slice((int) startIndex, (int) newSize));
     }
 
     @Override

@@ -11,6 +11,7 @@ import java.util.Objects;
  */
 public abstract sealed class MemorySection permits HeapMemorySection, BufferMemorySection, ReverseMemorySection {
     private final ByteOrder order;
+
     protected MemorySection(ByteOrder order) {
         this.order = Objects.requireNonNull(order);
     }
