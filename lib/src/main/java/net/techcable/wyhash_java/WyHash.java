@@ -6,56 +6,50 @@ import java.util.HexFormat;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.jetbrains.annotations.NotNull;
+
 import net.techcable.wyhash_java.memory.MemorySection;
 import net.techcable.wyhash_java.utils.Int128;
 import net.techcable.wyhash_java.utils.MathUtils;
 
 public final class WyHash {
-    private long seed;
-    private long a, b;
     private final long secret0, secret1, secret2, secret3;
-    private final long originalSeed;
+    private final long initialSeed;
 
     private WyHash(long seed, Secret secret) {
-        this.originalSeed = seed;
+        this.initialSeed = seed;
+        Objects.requireNonNull(secret, "Null secret");
         this.secret0 = secret.a;
         this.secret1 = secret.b;
         this.secret2 = secret.c;
         this.secret3 = secret.d;
-        this.reset();
     }
 
-    /**
-     * Reset the internal state of this hasher.
-     */
-    private void reset() {
-        this.a = this.b = -1;
-        this.seed = this.originalSeed;
+    private static final WyHash DEFAULT = new WyHash(0, Secret.DEFAULT);
+
+    public static WyHash of() {
+        return DEFAULT;
     }
 
-    public static WyHash create() {
-        return new WyHash(0, Secret.DEFAULT);
+    public static WyHash ofSeed(long seed) {
+        return seed == 0 ? DEFAULT : new WyHash(seed, Secret.DEFAULT);
     }
 
     public WyHash withSeed(long seed) {
-        return new WyHash(seed, this.getSecret());
+        return seed == this.initialSeed ? this : new WyHash(seed, this.getSecret());
     }
 
-    public WyHash withSecret(Secret secret) {
-        return new WyHash(this.originalSeed, secret);
+    public WyHash withSecret(@NotNull Secret secret) {
+        return new WyHash(this.initialSeed, secret);
     }
 
+    @NotNull
     public Secret getSecret() {
-        return new Secret(this.secret0, this.secret1, this.secret2, this.secret3);
+        return new Secret(secret0, secret1, secret2, secret3);
     }
 
     public long getSeed() {
-        return this.originalSeed;
-    }
-
-    private void setBothAB(Int128 vals) {
-        a = vals.lowBits();
-        b = vals.highBits();
+        return this.initialSeed;
     }
 
     //
@@ -87,55 +81,78 @@ public final class WyHash {
     }
 
     public long wyHash(MemorySection originalSection) {
-        this.reset();
-        final MemorySection section = originalSection.withOrder(REQUIRED_BYTE_ORDER);
+        return this.wyHash(new State(this), originalSection.withOrder(REQUIRED_BYTE_ORDER));
+    }
+
+    /**
+     * Represents temporary state of an individual hasher run.
+     * <p>
+     * This class is an implementation detail of {@link WyHash}.
+     * </p>
+     */
+    private static final class State {
+        private long seed;
+        private long a, b;
+
+        private State(WyHash setup) {
+            this.seed = setup.initialSeed;
+        }
+
+        private void setBothAB(Int128 vals) {
+            a = vals.lowBits();
+            b = vals.highBits();
+        }
+    }
+
+    private long wyHash(State state, MemorySection section) {
         final long length = section.length();
         assert length >= 0;
-        this.seed ^= wyMix(seed ^ secret0, secret1);
+        state.seed ^= wyMix(initialSeed ^ secret0, secret1);
         if (length <= 16) {
             if (length >= 4) {
                 /* a=(_wyr4(p)<<32)|_wyr4(p+((len>>3)<<2)) */
-                this.a = ((long) originalSection.getInt(0) << 32) | ((long) originalSection.getInt((length >> 3) << 2));
+                state.a = ((long) section.getInt(0) << 32) | ((long) section.getInt((length >> 3) << 2));
                 /*  b=(_wyr4(p+len-4)<<32)|_wyr4(p+len-4-((len>>3)<<2)) */
-                this.b = (long) originalSection.getInt(length - 4) << 32
-                        | (long) originalSection.getInt(length - 4 - ((length >> 3) << 2));
+                state.b = (long) section.getInt(length - 4) << 32
+                        | (long) section.getInt(length - 4 - ((length >> 3) << 2));
             } else if (length > 0) {
-                this.a = readThreeOrFewerBytes(section, length);
-                this.b = 0;
+                state.a = readThreeOrFewerBytes(section, length);
+                state.b = 0;
             } else {
-                a = b = 0;
+                state.a = state.b = 0;
             }
         } else {
             // manually outlined for speed
-            this.wyHashLarge(section, length);
+            this.wyHashLarge(state, section);
         }
-        a ^= secret1;
-        b ^= seed;
-        setBothAB(MathUtils.unsignedMultiplyFull(a, b));
-        return wyMix(a ^ secret0 ^ length, b ^ secret1);
+        state.a ^= secret1;
+        state.b ^= initialSeed;
+        state.setBothAB(MathUtils.unsignedMultiplyFull(state.a, state.b));
+        return wyMix(state.a ^ secret0 ^ length, state.b ^ secret1);
     }
 
-    private void wyHashLarge(MemorySection section, long length) {
-        long i = length;
+    private void wyHashLarge(State state, MemorySection section) {
+        long i = section.length();
+        assert i > 16;
         long offset = 0;
         if (i > 48) {
-            long see1 = seed, see2 = see1;
+            long see1 = initialSeed, see2 = see1;
             do {
-                seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ seed);
+                state.seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ initialSeed);
                 see1 = wyMix(section.getLong(offset + 16) ^ secret2, section.getLong(offset + 24) ^ see1);
                 see2 = wyMix(section.getLong(offset + 32) ^ secret3, section.getLong(offset + 40) ^ see2);
                 offset += 48;
                 i -= 48;
             } while (i > 48);
-            seed ^= see1 ^ see2;
+            state.seed ^= see1 ^ see2;
         }
         while (i > 16) {
-            seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ seed);
+            state.seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ initialSeed);
             i -= 16;
             offset += 16;
         }
-        this.a = section.getLong(offset + i - 16);
-        this.b = section.getLong(offset + i - 8);
+        state.a = section.getLong(offset + i - 16);
+        state.b = section.getLong(offset + i - 8);
     }
 
     /**

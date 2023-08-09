@@ -14,7 +14,7 @@ public class WyHashTest {
     @MethodSource("testData")
     public void wyHashTest(TestData data) {
         var ascii = data.msg.getBytes(StandardCharsets.US_ASCII);
-        long actual = WyHash.create().withSeed(data.seed).wyHash(ascii);
+        long actual = WyHash.of().withSeed(data.seed).wyHash(ascii);
         assertEquals(data.expectedHash, actual);
     }
 
