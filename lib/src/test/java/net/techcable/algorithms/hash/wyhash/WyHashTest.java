@@ -2,25 +2,68 @@
 
 package net.techcable.algorithms.hash.wyhash;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class WyHashTest {
     @ParameterizedTest
+    @DisplayName("Test wyHash for byte[]")
     @MethodSource("testData")
     public void wyHashTest(TestData data) {
-        var ascii = data.msg.getBytes(StandardCharsets.US_ASCII);
+        var ascii = data.getAsciiMsg();
         long actual = WyHash.of().withSeed(data.seed).wyHash(ascii);
         assertEquals(data.expectedHash, actual);
     }
 
-    public record TestData(String msg, long seed, long expectedHash) {}
+    private static final long RAND_SEED = 0x404bc51e92426043L;
+
+    @ParameterizedTest
+    @DisplayName("Test wyHash for byte[] with offset")
+    @MethodSource("testData")
+    public void wyHashTestOffset(TestData testData) {
+        final byte[] ascii = testData.getAsciiMsg();
+        var rand = new Random(RAND_SEED);
+        final byte[] randomData = new byte[2048 + MAX_MSG_LENGTH_ASCII];
+        rand.nextBytes(randomData);
+        int[] offsets = new int[] {0, 1, 2, 3, 4, 6, 7, 8, 13, 16, 19, 31, 32, 127, 257, 482, 582, 1000, 1024, 2000};
+        var hasher = WyHash.of().withSeed(testData.seed);
+        for (int offset : offsets) {
+            byte[] bytes = randomData.clone();
+            System.arraycopy(ascii, 0, bytes, offset, ascii.length);
+            long actualHash = hasher.wyHash(bytes, offset, ascii.length);
+            assertEquals(testData.expectedHash(), actualHash, () -> "Bad hash for offset " + offset);
+        }
+        assertArrayEquals(Arrays.stream(offsets).sorted().toArray(), offsets);
+    }
+
+    @ParameterizedTest
+    @DisplayName("Test wyHash for DirectByteBuffer")
+    @MethodSource("testData")
+    public void wyHashDirectByteBufferTest(TestData data) {
+        var ascii = data.getAsciiMsg();
+        var buffer = ByteBuffer.allocateDirect(ascii.length);
+        assertEquals(ascii.length, buffer.limit());
+        buffer.put(ascii);
+        assertEquals(ascii.length, buffer.position());
+        long actual = WyHash.of().withSeed(data.seed).wyHash(ascii);
+        assertEquals(data.expectedHash, actual);
+    }
+
+    public record TestData(String msg, long seed, long expectedHash) {
+        public byte[] getAsciiMsg() {
+            return this.msg.getBytes(StandardCharsets.US_ASCII);
+        }
+    }
 
     private static final List<String> TEST_MSGS = List.of(
             "",
@@ -29,7 +72,9 @@ public class WyHashTest {
             "message digest",
             "abcdefghijklmnopqrstuvwxyz",
             "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",
-            "1234567890123456789012345678901234567890123456789012345678901234567890" + "1234567890");
+            "12345678901234567890123456789012345678901234567890123456789012345678901234567890");
+    private static final int MAX_MSG_LENGTH_ASCII =
+            TEST_MSGS.stream().mapToInt(String::length).max().orElseThrow();
     private static final List<Long> TEST_HASHES = List.of(
             0x0409638ee2bde459L,
             0xa8412d091b5fe0a9L,
