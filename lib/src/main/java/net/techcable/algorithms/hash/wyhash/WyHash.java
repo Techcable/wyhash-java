@@ -189,7 +189,7 @@ public final class WyHash {
             this.wyHashLarge(state, section);
         }
         state.a ^= secret1;
-        state.b ^= initialSeed;
+        state.b ^= state.seed;
         state.setBothAB(MathUtils.unsignedMultiplyFull(state.a, state.b));
         return wyMix(state.a ^ secret0 ^ length, state.b ^ secret1);
     }
@@ -199,9 +199,9 @@ public final class WyHash {
         assert i > 16;
         long offset = 0;
         if (i > 48) {
-            long see1 = initialSeed, see2 = see1;
+            long see1 = state.seed, see2 = see1;
             do {
-                state.seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ initialSeed);
+                state.seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ state.seed);
                 see1 = wyMix(section.getLong(offset + 16) ^ secret2, section.getLong(offset + 24) ^ see1);
                 see2 = wyMix(section.getLong(offset + 32) ^ secret3, section.getLong(offset + 40) ^ see2);
                 offset += 48;
@@ -210,7 +210,7 @@ public final class WyHash {
             state.seed ^= see1 ^ see2;
         }
         while (i > 16) {
-            state.seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ initialSeed);
+            state.seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ state.seed);
             i -= 16;
             offset += 16;
         }
