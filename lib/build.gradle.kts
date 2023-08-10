@@ -11,6 +11,10 @@ java {
     withJavadocJar()
 }
 
+base {
+    archivesName.set("wyhash-java")
+}
+
 tasks.test {
     useJUnitPlatform()
 }
