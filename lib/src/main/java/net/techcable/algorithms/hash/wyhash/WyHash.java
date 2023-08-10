@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 
-import net.techcable.algorithms.hash.wyhash.utils.Int128;
 import net.techcable.algorithms.hash.wyhash.utils.MathUtils;
 
 /**
@@ -177,9 +176,9 @@ public final class WyHash {
             this.seed = setup.initialSeed;
         }
 
-        private void setBothAB(Int128 vals) {
-            a = vals.lowBits();
-            b = vals.highBits();
+        private void setBothLetters(long a, long b) {
+            this.a = a;
+            this.b = b;
         }
     }
 
@@ -203,11 +202,11 @@ public final class WyHash {
             }
         } else {
             // manually outlined for speed
-             this.wyHashLarge(state, section);
+            this.wyHashLarge(state, section);
         }
         state.a ^= this.secret1;
         state.b ^= state.seed;
-        state.setBothAB(MathUtils.unsignedMultiplyFull(state.a, state.b));
+        state.setBothLetters(state.a * state.b, MathUtils.unsignedMultiplyHigh(state.a, state.b));
         return wyMix(state.a ^ this.secret0 ^ fullLength, state.b ^ this.secret1);
     }
 

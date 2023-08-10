@@ -14,6 +14,7 @@ import net.techcable.algorithms.hash.wyhash.WyHash;
  * Miscellaneous math utilities needed for {@link WyHash}.
  */
 public final class MathUtils {
+    // Want to prefer JDK impl, because it is @IntrinsicCandidate
     private static final MethodHandle UNSIGNED_MULTIPLY_HIGH_METHOD;
 
     static {
@@ -64,22 +65,6 @@ public final class MathUtils {
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }
-    }
-
-    /**
-     * Perform a "full" multiplication of the two specified {@code long} values.
-     * <p>
-     * Returns a {@link Int128 128-bit integer object} containing both parts of the results.
-     * </p>
-     *
-     * @param x the first value to multiply
-     * @param y the second value to multiply
-     * @return the product of multiplication, as an {@link Int128}
-     * @see #unsignedMultiplyHigh(long, long) just multiplying the high bits
-     * @see Int128 the wrapper class used to store 128-bit integers
-     */
-    public static Int128 unsignedMultiplyFull(long x, long y) {
-        return new Int128(x * y, unsignedMultiplyHigh(x, y));
     }
 
     /**
