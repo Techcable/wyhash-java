@@ -72,5 +72,7 @@ spotless {
 
         // Cleanup imports
         importOrder("java|javax", "", "net.techcable", "\\#")
+
+        licenseHeader("// SPDX-License-Identifier: Apache-2.0 WITH LLVM-Exception\n\n")
     }
 }
