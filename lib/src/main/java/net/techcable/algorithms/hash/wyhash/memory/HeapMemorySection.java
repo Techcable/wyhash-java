@@ -1,4 +1,4 @@
-package net.techcable.wyhash_java.memory;
+package net.techcable.algorithms.hash.wyhash.memory;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;

@@ -1,4 +1,4 @@
-package net.techcable.wyhash_java.memory;
+package net.techcable.algorithms.hash.wyhash.memory;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

@@ -6,5 +6,3 @@ java {
     withSourcesJar()
     withJavadocJar()
 }
-dependencies {
-}

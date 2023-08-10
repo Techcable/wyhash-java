@@ -1,4 +1,4 @@
-package net.techcable.wyhash_java.utils;
+package net.techcable.algorithms.hash.wyhash.utils;
 
 import java.nio.ByteOrder;
 import java.util.HexFormat;

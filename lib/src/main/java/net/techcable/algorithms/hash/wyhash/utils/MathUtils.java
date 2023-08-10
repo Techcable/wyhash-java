@@ -1,4 +1,4 @@
-package net.techcable.wyhash_java.utils;
+package net.techcable.algorithms.hash.wyhash.utils;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
@@ -6,8 +6,10 @@ import java.lang.invoke.MethodType;
 
 import org.jetbrains.annotations.VisibleForTesting;
 
+import net.techcable.algorithms.hash.wyhash.WyHash;
+
 /**
- * Miscellaneous math utilities needed for {@link net.techcable.wyhash_java.WyHash}.
+ * Miscellaneous math utilities needed for {@link WyHash}.
  */
 public final class MathUtils {
     private static final MethodHandle UNSIGNED_MULTIPLY_HIGH_METHOD;

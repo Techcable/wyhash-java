@@ -1,4 +1,4 @@
-package net.techcable.wyhash_java.memory;
+package net.techcable.algorithms.hash.wyhash.memory;
 
 /* package */ final class ReverseMemorySection extends MemorySection {
     private final MemorySection src;

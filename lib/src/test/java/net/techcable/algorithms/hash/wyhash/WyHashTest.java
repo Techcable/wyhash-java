@@ -1,4 +1,4 @@
-package net.techcable.wyhash_java;
+package net.techcable.algorithms.hash.wyhash;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;

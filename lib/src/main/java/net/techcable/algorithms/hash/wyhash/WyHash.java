@@ -1,4 +1,4 @@
-package net.techcable.wyhash_java;
+package net.techcable.algorithms.hash.wyhash;
 
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -8,9 +8,9 @@ import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 
-import net.techcable.wyhash_java.memory.MemorySection;
-import net.techcable.wyhash_java.utils.Int128;
-import net.techcable.wyhash_java.utils.MathUtils;
+import net.techcable.algorithms.hash.wyhash.memory.MemorySection;
+import net.techcable.algorithms.hash.wyhash.utils.Int128;
+import net.techcable.algorithms.hash.wyhash.utils.MathUtils;
 
 /**
  * Represents the configuration options for the
@@ -72,7 +72,7 @@ public final class WyHash {
      * </p>
      *
      * @return the secret
-     * @see #withSeed(long)
+     * @see #withSeed(long) for a way to change the secret
      */
     @NotNull
     public Secret getSecret() {

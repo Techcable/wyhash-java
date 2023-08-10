@@ -22,7 +22,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-group = "net.techcable.wyhash"
+group = "net.techcable.algorithms.hash.wyhash"
 
 tasks.withType<JavaCompile> {
     options.release.set(17)
