@@ -2,6 +2,7 @@
 
 package net.techcable.algorithms.hash.wyhash;
 
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.HexFormat;
@@ -10,7 +11,6 @@ import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.NotNull;
 
-import net.techcable.algorithms.hash.wyhash.memory.MemorySection;
 import net.techcable.algorithms.hash.wyhash.utils.Int128;
 import net.techcable.algorithms.hash.wyhash.utils.MathUtils;
 
@@ -107,10 +107,10 @@ public final class WyHash {
     public static final ByteOrder REQUIRED_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
 
     // _wyr3
-    private static long readThreeOrFewerBytes(MemorySection section, long size) {
+    private static long readThreeOrFewerBytes(Input input, int size) {
         assert size > 0 && size <= 3;
         /* return (((uint64_t)p[0])<<16)|(((uint64_t)p[k>>1])<<8)|p[k-1]; */
-        return (long) section.getByte(0) << 16 | (long) section.getByte(size >> 1) << 8 | section.getByte(size - 1);
+        return (long) input.getByte(0) << 16 | (long) input.getByte(size >> 1) << 8 | input.getByte(size - 1);
     }
 
     /**
@@ -120,11 +120,11 @@ public final class WyHash {
      * @return the computed hash code
      */
     public long wyHash(byte[] bytes) {
-        return wyHash(bytes, 0, bytes.length);
+        return wyHash(new State(this), Input.ofArray(bytes, 0, bytes.length));
     }
 
     /**
-     * Hash a sub-region of the specified byte array,.
+     * Hash a sub-region of the specified byte array,
      *
      * @param bytes the array to hash
      * @param startOffset the start index of where to begin hashing
@@ -134,17 +134,33 @@ public final class WyHash {
      */
     public long wyHash(byte[] bytes, int startOffset, int length) {
         Objects.checkFromIndexSize(startOffset, length, bytes.length);
-        return wyHash(MemorySection.ofArray(bytes, startOffset, length));
+        return wyHash(new State(this), Input.ofArray(bytes, startOffset, length));
     }
 
     /**
-     * Hash the specified {@link MemorySection}.
+     * Hash the specified {@link java.nio.ByteBuffer} starting at
+     * index {@code 0} and ending at {@link ByteBuffer#limit()}.
      *
-     * @param section the section to hash
+     * @param buffer the buffer to hash
+     * @return the computed hash code
+     * @see #wyHash(ByteBuffer, int, int) to hash only a subsection of the buffer
+     */
+    public long wyHash(ByteBuffer buffer) {
+        return this.wyHash(new State(this), Input.ofBuffer(buffer));
+    }
+
+    /**
+     * Hash exactly {@code amount} bytes,
+     * beginning at the specified {@code startOffset}.
+     *
+     * @param buffer the buffer to hash
+     * @param startOffset the starting position in the buffer to hash
+     * @param count the number of bytes to hash
+     * @throws IndexOutOfBoundsException if the provided indexes are invalid
      * @return the computed hash code
      */
-    public long wyHash(MemorySection section) {
-        return this.wyHash(new State(this), section.withOrder(REQUIRED_BYTE_ORDER));
+    public long wyHash(ByteBuffer buffer, int startOffset, int count) {
+        return wyHash(new State(this), Input.ofBuffer(buffer, startOffset, count));
     }
 
     /**
@@ -167,11 +183,12 @@ public final class WyHash {
         }
     }
 
-    private long wyHash(State state, MemorySection section) {
-        final long length = section.length();
-        assert length >= 0;
+    private long wyHash(State state, Input section) {
+        final long fullLength = section.length();
+        assert fullLength >= 0;
         state.seed ^= wyMix(initialSeed ^ secret0, secret1);
-        if (length <= 16) {
+        if (fullLength <= 16) {
+            final int length = (int) fullLength;
             if (length >= 4) {
                 /* a=(_wyr4(p)<<32)|_wyr4(p+((len>>3)<<2)) */
                 state.a = ((long) section.getInt(0) << 32) | ((long) section.getInt((length >> 3) << 2));
@@ -186,36 +203,36 @@ public final class WyHash {
             }
         } else {
             // manually outlined for speed
-            this.wyHashLarge(state, section);
+             this.wyHashLarge(state, section);
         }
-        state.a ^= secret1;
+        state.a ^= this.secret1;
         state.b ^= state.seed;
         state.setBothAB(MathUtils.unsignedMultiplyFull(state.a, state.b));
-        return wyMix(state.a ^ secret0 ^ length, state.b ^ secret1);
+        return wyMix(state.a ^ this.secret0 ^ fullLength, state.b ^ this.secret1);
     }
 
-    private void wyHashLarge(State state, MemorySection section) {
-        long i = section.length();
-        assert i > 16;
+    private void wyHashLarge(State state, Input input) {
+        long i = input.length();
+        if (i <= 16) throw new AssertionError();
         long offset = 0;
         if (i > 48) {
             long see1 = state.seed, see2 = see1;
             do {
-                state.seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ state.seed);
-                see1 = wyMix(section.getLong(offset + 16) ^ secret2, section.getLong(offset + 24) ^ see1);
-                see2 = wyMix(section.getLong(offset + 32) ^ secret3, section.getLong(offset + 40) ^ see2);
+                state.seed = wyMix(input.getLongL(offset) ^ secret1, input.getLongL(offset + 8) ^ state.seed);
+                see1 = wyMix(input.getLongL(offset + 16) ^ secret2, input.getLongL(offset + 24) ^ see1);
+                see2 = wyMix(input.getLongL(offset + 32) ^ secret3, input.getLongL(offset + 40) ^ see2);
                 offset += 48;
                 i -= 48;
             } while (i > 48);
             state.seed ^= see1 ^ see2;
         }
         while (i > 16) {
-            state.seed = wyMix(section.getLong(offset) ^ secret1, section.getLong(offset + 8) ^ state.seed);
+            state.seed = wyMix(input.getLongL(offset) ^ secret1, input.getLongL(offset + 8) ^ state.seed);
             i -= 16;
             offset += 16;
         }
-        state.a = section.getLong(offset + i - 16);
-        state.b = section.getLong(offset + i - 8);
+        state.a = input.getLongL(offset + i - 16);
+        state.b = input.getLongL(offset + i - 8);
     }
 
     /**
