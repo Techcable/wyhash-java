@@ -13,19 +13,24 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class MathUtilsTest {
     @ParameterizedTest
     @DisplayName("Testing fallback impl for  MathUtils.unsignedMultiplyHigh")
     @MethodSource("multiplicationInput")
     public void testUnsignedMultiplyHighFallback(LongPair data) {
-        long actual = MathUtils.unsignedMultiplyHighFallback(data.a(), data.b());
+        long actualHighBits = MathUtils.unsignedMultiplyHighFallback(data.a(), data.b());
         BigInteger expected = unsignedLongToBigInteger(data.a).multiply(unsignedLongToBigInteger(data.b));
         assertTrue(expected.bitLength() <= 128, () -> "Too many bits for 128 int: " + expected.bitLength());
-        if (expected.signum() < 0) {}
+        assertFalse(expected.signum() < 0);
+        BigInteger expectedHighBitsBig = expected.and(UPPER_64).shiftRight(64);
+        assertTrue(expectedHighBitsBig.bitLength() <= 64);
+        long expectedHighBits = bigIntegerToUnsignedLong(expectedHighBitsBig);
+        assertEquals(expectedHighBits, actualHighBits);
     }
+
+    private static final BigInteger UPPER_64 = BigInteger.valueOf(-1).shiftLeft(64);
 
     private static final int RAND_TEST_COUNT = 2048;
     private static final long RAND_SEED = 0xe00bd0422cab5accL;
@@ -72,9 +77,14 @@ public class MathUtilsTest {
                 Integer.MIN_VALUE - 1L,
                 Integer.MAX_VALUE + 1L
             })
-    @DisplayName("Test that unsignedLongToBigInteger works properly")
-    public void testUnsignedLongToBigInteger(long l) {
-        assertEquals(new BigInteger(Long.toUnsignedString(l)), unsignedLongToBigInteger(l));
+    @DisplayName("Test that conversions u64 <-> BigInteger work properly")
+    public void testUnsignedLongConvertBigInteger(long longVal) {
+        var expectedBigInt = new BigInteger(Long.toUnsignedString(longVal));
+        assertEquals(expectedBigInt, unsignedLongToBigInteger(longVal));
+        assertEquals(
+                longVal,
+                bigIntegerToUnsignedLong(expectedBigInt),
+                () -> "Failed conversion of " + expectedBigInt.toString(16) + " back into long");
     }
 
     private static final VarHandle BYTE_ARRAY_AS_BIG_ENDIAN_LONGS =
@@ -82,8 +92,21 @@ public class MathUtilsTest {
 
     private static BigInteger unsignedLongToBigInteger(long l) {
         byte[] buf = new byte[8];
-        BYTE_ARRAY_AS_BIG_ENDIAN_LONGS.set(buf, l);
+        BYTE_ARRAY_AS_BIG_ENDIAN_LONGS.set(buf, 0, l);
         return new BigInteger(l == 0 ? 0 : 1, buf);
+    }
+
+    private static long bigIntegerToUnsignedLong(final BigInteger value) {
+        if (value.bitLength() > 64 || value.signum() < 0) {
+            throw new IllegalArgumentException("Bad value: " + value.toString(16));
+        }
+        long resValue = 0;
+        for (int i = 0; i < 64; i++) {
+            if (value.testBit(i)) {
+                resValue |= (1L << i);
+            }
+        }
+        return resValue;
     }
 
     record LongPair(long a, long b) {}
