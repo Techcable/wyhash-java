@@ -6,6 +6,8 @@ plugins {
 val gitVersion: groovy.lang.Closure<String> by extra
 version = gitVersion()
 
+extra.set("artifactId", "wyhash")
+
 java {
     withSourcesJar()
     withJavadocJar()
